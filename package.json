@@ -1,0 +1,15 @@
+{
+  "name": "local-llm-web-portal",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ChatGPT-style web portal for a local llama.cpp Qwen model.",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node src/server.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
