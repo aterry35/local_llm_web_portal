@@ -28,6 +28,12 @@ Point the portal at a custom model endpoint:
 LOCAL_LLM_BASE_URL=http://<MODEL_HOST>:8012 npm start
 ```
 
+Or set it in an ignored local `.env` file:
+
+```text
+LOCAL_LLM_BASE_URL=http://<MODEL_HOST>:8012
+```
+
 Bind the portal to localhost explicitly:
 
 ```bash

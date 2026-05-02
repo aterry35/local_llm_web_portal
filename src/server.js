@@ -1,4 +1,5 @@
 import { createServer } from 'node:http';
+import { readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -7,6 +8,8 @@ import { buildLlmMessages } from './prompt.js';
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const projectRoot = normalize(join(__dirname, '..'));
 const publicRoot = join(projectRoot, 'public');
+
+loadEnvFile(join(projectRoot, '.env'));
 
 const PORT = Number.parseInt(process.env.PORT || '5173', 10);
 const HOST = process.env.HOST || '127.0.0.1';
@@ -21,6 +24,46 @@ const MIME_TYPES = {
   '.svg': 'image/svg+xml',
   '.ico': 'image/x-icon'
 };
+
+function loadEnvFile(filePath) {
+  try {
+    const contents = readFileSync(filePath, 'utf8');
+
+    for (const rawLine of contents.split(/\r?\n/)) {
+      const line = rawLine.trim();
+
+      if (!line || line.startsWith('#')) {
+        continue;
+      }
+
+      const separatorIndex = line.indexOf('=');
+
+      if (separatorIndex === -1) {
+        continue;
+      }
+
+      const key = line.slice(0, separatorIndex).trim();
+      let value = line.slice(separatorIndex + 1).trim();
+
+      if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key) || process.env[key] !== undefined) {
+        continue;
+      }
+
+      if (
+        (value.startsWith('"') && value.endsWith('"')) ||
+        (value.startsWith("'") && value.endsWith("'"))
+      ) {
+        value = value.slice(1, -1);
+      }
+
+      process.env[key] = value;
+    }
+  } catch (error) {
+    if (error.code !== 'ENOENT') {
+      throw error;
+    }
+  }
+}
 
 function sendJson(response, statusCode, body) {
   response.writeHead(statusCode, {

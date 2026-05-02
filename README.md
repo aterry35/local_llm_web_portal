@@ -51,6 +51,9 @@ Environment variables:
 - `PORT`: web portal port. Defaults to `5173`.
 - `LOCAL_LLM_BASE_URL`: model server URL. Defaults to `http://127.0.0.1:8012`.
 
+The server loads local environment values from `.env` before it reads these
+variables. Keep `.env` private and use `.env.example` as the committed template.
+
 Example:
 
 ```bash
