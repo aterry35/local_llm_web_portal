@@ -420,6 +420,12 @@ svg {
   font-weight: 750;
 }
 
+.setting-control small {
+  color: #7d8797;
+  font-size: 12px;
+  font-weight: 650;
+}
+
 .setting-control input[type="range"] {
   width: 140px;
   accent-color: var(--accent);

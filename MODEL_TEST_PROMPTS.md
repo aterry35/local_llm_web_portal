@@ -11,7 +11,8 @@ http://127.0.0.1:5173
 Recommended settings:
 
 - Exact answer tests: temperature `0`, max tokens `32` to `128`.
-- Coding and debugging: temperature `0.1` to `0.3`, max tokens `512` to `1024`.
+- Simple coding and debugging: temperature `0.1` to `0.3`, max tokens `256` to `512`.
+- Larger design/code-generation tasks: temperature `0.1` to `0.3`, max tokens `512` to `1024`.
 - Writing and brainstorming: temperature `0.4` to `0.8`, max tokens `512` to `1024`.
 - File analysis: temperature `0.2`, max tokens `512` to `1536`.
 

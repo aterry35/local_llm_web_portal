@@ -50,6 +50,10 @@ Environment variables:
 - `HOST`: web portal bind host. Defaults to `127.0.0.1`.
 - `PORT`: web portal port. Defaults to `5173`.
 - `LOCAL_LLM_BASE_URL`: model server URL. Defaults to `http://127.0.0.1:8012`.
+- `LOCAL_LLM_TIMEOUT_BASE_MS`: minimum chat timeout. Defaults to `120000`.
+- `LOCAL_LLM_TIMEOUT_PER_TOKEN_MS`: extra timeout budget per requested token.
+  Defaults to `700`.
+- `LOCAL_LLM_TIMEOUT_MAX_MS`: maximum chat timeout. Defaults to `900000`.
 
 The server loads local environment values from `.env` before it reads these
 variables. Keep `.env` private and use `.env.example` as the committed template.

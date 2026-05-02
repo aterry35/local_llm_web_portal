@@ -6,6 +6,7 @@ import {
   formatAttachmentsForPrompt,
   normalizeMessages
 } from '../src/prompt.js';
+import { getChatTimeoutMs } from '../src/server.js';
 
 test('normalizes chat messages to user and assistant roles', () => {
   assert.deepEqual(
@@ -62,4 +63,9 @@ test('truncates oversized attachments', () => {
 
   assert.match(prompt, /truncated/);
   assert.ok(prompt.length < content.length + 500);
+});
+
+test('gives larger token requests a longer model timeout', () => {
+  assert.ok(getChatTimeoutMs(1024) > getChatTimeoutMs(128));
+  assert.ok(getChatTimeoutMs(1024) >= 120_000);
 });

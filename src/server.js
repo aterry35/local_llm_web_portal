@@ -5,6 +5,7 @@ import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildLlmMessages } from './prompt.js';
 
+const __filename = fileURLToPath(import.meta.url);
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const projectRoot = normalize(join(__dirname, '..'));
 const publicRoot = join(projectRoot, 'public');
@@ -15,6 +16,9 @@ const PORT = Number.parseInt(process.env.PORT || '5173', 10);
 const HOST = process.env.HOST || '127.0.0.1';
 const LOCAL_LLM_BASE_URL = (process.env.LOCAL_LLM_BASE_URL || 'http://127.0.0.1:8012').replace(/\/$/, '');
 const REQUEST_BODY_LIMIT = 2 * 1024 * 1024;
+const CHAT_TIMEOUT_BASE_MS = readIntegerEnv('LOCAL_LLM_TIMEOUT_BASE_MS', 120_000, 30_000, 600_000);
+const CHAT_TIMEOUT_PER_TOKEN_MS = readIntegerEnv('LOCAL_LLM_TIMEOUT_PER_TOKEN_MS', 700, 100, 5_000);
+const CHAT_TIMEOUT_MAX_MS = readIntegerEnv('LOCAL_LLM_TIMEOUT_MAX_MS', 900_000, CHAT_TIMEOUT_BASE_MS, 3_600_000);
 
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -63,6 +67,23 @@ function loadEnvFile(filePath) {
       throw error;
     }
   }
+}
+
+function readIntegerEnv(name, fallback, minimum, maximum) {
+  const value = Number.parseInt(process.env[name] || '', 10);
+
+  if (!Number.isFinite(value)) {
+    return fallback;
+  }
+
+  return Math.min(maximum, Math.max(minimum, value));
+}
+
+function getChatTimeoutMs(maxTokens) {
+  return Math.min(
+    CHAT_TIMEOUT_MAX_MS,
+    Math.max(CHAT_TIMEOUT_BASE_MS, CHAT_TIMEOUT_BASE_MS + maxTokens * CHAT_TIMEOUT_PER_TOKEN_MS)
+  );
 }
 
 function sendJson(response, statusCode, body) {
@@ -170,19 +191,34 @@ async function proxyChat(body) {
   }
 
   const startedAt = Date.now();
-  const llmResponse = await fetch(`${LOCAL_LLM_BASE_URL}/v1/chat/completions`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      messages,
-      max_tokens: request.options.maxTokens,
-      temperature: request.options.temperature,
-      stream: false
-    }),
-    signal: AbortSignal.timeout(120000)
-  });
+  const timeoutMs = getChatTimeoutMs(request.options.maxTokens);
+  let llmResponse;
+
+  try {
+    llmResponse = await fetch(`${LOCAL_LLM_BASE_URL}/v1/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        messages,
+        max_tokens: request.options.maxTokens,
+        temperature: request.options.temperature,
+        stream: false
+      }),
+      signal: AbortSignal.timeout(timeoutMs)
+    });
+  } catch (error) {
+    if (error.name === 'TimeoutError') {
+      const timeoutError = new Error(
+        `Local model request timed out after ${Math.round(timeoutMs / 1000)} seconds. Lower max tokens or increase LOCAL_LLM_TIMEOUT_MAX_MS.`
+      );
+      timeoutError.statusCode = 504;
+      throw timeoutError;
+    }
+
+    throw error;
+  }
 
   const responseText = await llmResponse.text();
   let payload;
@@ -215,6 +251,7 @@ async function proxyChat(body) {
     contextUserContent,
     usage: payload.usage || null,
     latencyMs: Date.now() - startedAt,
+    timeoutMs,
     endpoint: LOCAL_LLM_BASE_URL
   };
 }
@@ -274,7 +311,14 @@ async function handleRequest(request, response) {
 
 const server = createServer(handleRequest);
 
-server.listen(PORT, HOST, () => {
-  console.log(`Local LLM portal: http://${HOST}:${PORT}`);
-  console.log(`Model endpoint: ${LOCAL_LLM_BASE_URL}`);
-});
+if (process.argv[1] === __filename) {
+  server.listen(PORT, HOST, () => {
+    console.log(`Local LLM portal: http://${HOST}:${PORT}`);
+    console.log(`Model endpoint: ${LOCAL_LLM_BASE_URL}`);
+    console.log(
+      `Chat timeout: base=${CHAT_TIMEOUT_BASE_MS}ms perToken=${CHAT_TIMEOUT_PER_TOKEN_MS}ms max=${CHAT_TIMEOUT_MAX_MS}ms`
+    );
+  });
+}
+
+export { getChatTimeoutMs, readIntegerEnv };

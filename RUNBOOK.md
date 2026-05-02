@@ -34,6 +34,15 @@ Or set it in an ignored local `.env` file:
 LOCAL_LLM_BASE_URL=http://<MODEL_HOST>:8012
 ```
 
+For CPU-only model hosts, keep the timeout budget high enough for large
+responses:
+
+```text
+LOCAL_LLM_TIMEOUT_BASE_MS=120000
+LOCAL_LLM_TIMEOUT_PER_TOKEN_MS=700
+LOCAL_LLM_TIMEOUT_MAX_MS=900000
+```
+
 Bind the portal to localhost explicitly:
 
 ```bash
